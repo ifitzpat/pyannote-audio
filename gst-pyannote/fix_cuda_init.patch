@@ -1,0 +1,29 @@
+--- a/gst_pyannote/pipeline_manager.py
++++ b/gst_pyannote/pipeline_manager.py
+@@ -29,14 +29,22 @@ class PyannotePipelineManager:
+     device : str, optional
+         PyTorch device to use ("cuda", "cpu", etc.)
++        Default: "cpu" (to avoid CUDA initialization issues)
+     """
+
+     def __init__(self, device: Optional[str] = None):
+-        # Determine device
++        # Determine device - default to CPU to avoid std::bad_alloc
++        # during CUDA context initialization in constrained environments
+         if device is None:
+-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
++            # Default to CPU to avoid CUDA initialization on import
++            # Users can explicitly pass device="cuda" if needed
++            self.device = torch.device("cpu")
+         else:
+-            self.device = torch.device(device)
++            try:
++                self.device = torch.device(device)
++            except Exception as e:
++                # Fall back to CPU if device initialization fails
++                print(f"Warning: Failed to initialize device '{device}': {e}")
++                print("Falling back to CPU")
++                self.device = torch.device("cpu")
+
+         self.pipeline = None
+         self.model_name = None
