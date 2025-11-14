@@ -2,7 +2,31 @@
 
 This guide addresses `std::bad_alloc` (C++ memory allocation failure) occurring during `import` of gst-pyannote, particularly in GNU Guix environments.
 
+> **UPDATE:** The root cause has been identified as **torchcodec initialization**, not CUDA. See [TORCHCODEC_ANALYSIS.md](TORCHCODEC_ANALYSIS.md) for complete details.
+>
+> **Quick fix:** `pip uninstall torchcodec -y`
+
 ## Identified Potential Causes
+
+### 0. **torchcodec Initialization (CONFIRMED ROOT CAUSE)**
+
+**See:** [TORCHCODEC_ANALYSIS.md](TORCHCODEC_ANALYSIS.md) for complete analysis.
+
+**Summary:** torchcodec is a PyTorch library that wraps FFmpeg for audio/video decoding. When imported, it:
+- Initializes FFmpeg codec contexts
+- Probes hardware decoders (VAAPI, VDPAU, CUDA)
+- Has known compatibility issues with PyTorch 2.9.0+cpu
+
+**Location:** Triggered by `import pyannote.audio` → `pyannote.audio.core.io` → `import torchcodec`
+
+**Quick Solution:**
+```bash
+pip uninstall torchcodec -y
+```
+
+**Why it works:** gst-pyannote doesn't need file I/O (uses GStreamer buffers), so torchcodec is unnecessary for your use case.
+
+**Alternative solutions:** See TORCHCODEC_ANALYSIS.md for building from source or downgrading PyTorch.
 
 ### 1. **CUDA Context Initialization (Most Likely)**
 
